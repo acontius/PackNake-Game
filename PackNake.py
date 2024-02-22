@@ -1,15 +1,26 @@
 import curses
 import random
 import time
+import sys
+import select
+
 
 #setting
-testng = True
+testng = False
 food_age = 500
 food_number = 10
-player_char = '✈'
-food_cahr = '⛽'
+player_char = '🚙'
+food_cahr = '🥫'
 enemy_char = '💣'
 barrier_char = '𝌉'
+
+
+def get_key():
+    while True:
+        if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+            return sys.stdin.read(1)
+        else:
+            return ''
 
 
 stdscr = curses.initscr() #openning a screen
@@ -17,8 +28,8 @@ curses.noecho() # we use no echo to dont see every thing we entered in the termi
 curses.cbreak() # doesn't need enter after every everything
 stdscr.keypad(True)
 stdscr.nodelay(True)
-stdscr.getkey()  # wait for a key
-curses.curse_set(False)
+
+curses.curs_set(False)
 
 maxl = curses.LINES - 1
 maxc = curses.COLS - 1
@@ -28,28 +39,29 @@ world = []
 food = []
 enemy = []
 
-player_c = player_l = 0
+player_c = player_l = 1
+
 
 def random_place():
-    a = random.randint(0,maxl)
-    b = random.randint(0,maxc)
-    while world != ' ' : 
-        a = random.randint(0,maxl)
-        b = random.randint(0,maxc)
-    return a,b  
+    a = random.randint(0, maxl - 1)
+    b = random.randint(0, maxc - 1)
+    while world[a][b] != ' ':
+        a = random.randint(0, maxl - 1)
+        b = random.randint(0, maxc - 1)
+    return a, b
 
 def init(): #creating game's world
     global player_l , player_c 
     for i in range (-1 , maxl + 1):
         world.append([])
         for j in range(-1 ,maxc + 1):
-            world[i].append(' ' if random.randint() > 0.03 else barrier_char) # adding Barriers
+            world[i].append(' ' if random.randint(0, 100) > 0.03 else barrier_char) # adding Barriers
     
     for i in range(food_number):
         food_l , food_c = random_place()
         food_age = random.randint(1000 , 10000)
         food.append((food_l,food_c,food_age))
-    for i in range(3):
+    for i in range(10):
         enemy_l,enemy_c = random_place()
         enemy.append((enemy_l,enemy_c))
 
@@ -67,7 +79,7 @@ def draw():
     for i in range(maxl):
         for j in range(maxc):
             stdscr.addch(i , j , world[i][j])
-    stdscr.addstr(1 , 1 , f"Score = {score}")
+    stdscr.addstr(0 , 0 , f"Score = {score}")
 
 #showing the food
     for f in food :
@@ -75,15 +87,15 @@ def draw():
         stdscr.addch(food_l , food_c , food_cahr)
 
 #showing the enemy 
-for e in enemy:
-    l , c = e
-    stdscr.addch(l ,c ,enemy_char)
+    for e in enemy:
+        l , c = e
+        stdscr.addch(l ,c , enemy_char)
 
 #showing the player
-    stdscr.add(player_l , player_c , player_char)
-    stdscr.refresh()
+        stdscr.addch(player_l , player_c , player_char)
+        stdscr.refresh()
 
-def move():
+def move(c):
     global player_c,player_l
     '''get one of the asdw and move toward that direction'''
     if c == 'w' and world[player_l - 1][player_c] != barrier_char:
@@ -118,37 +130,37 @@ def check_food():
 def move_enemy():
     for i in range(len(enemy)):
         l , c = enemy[i]
-        if random.randint() > 0.8 :
+        if random.random() > 0.5 :
             if l > player_l:
                 l -= 1
-        if random.randint() > 0.8 :        
+        if random.random() > 0.5 :        
             if c > player_c:
-              c -+ 1
-        if random.randint() > 0.8 :      
+              c -= 1
+        if random.random() > 0.5 :      
             if l < player_l:
               l += 1
-        if random.randint() > 0.8 :      
-            if l < player_c:
+        if random.random() > 0.5 :      
+            if c < player_c:
                 c += 1
             l += random.choice([0 , 1 , -1])
-            c += random.choice([0 , -1 , 1])
+            c += random.choice([0 , 1 , -1])
             l = in_range(l , 0 , maxl)
             c = in_range(c , 0 , maxc)
 
             enemy[i] = (l , c)
 
-        if l == player_l and c == player_c and not testng:
-            stdscr.addstr(maxl//2, maxc//2, "Cyka Blyat! You Died Nakhoy!")
-            stdscr.refresh()
-            time.sleep(3)
-            playing = False
+    if l == player_l and c == player_c :
+        stdscr.addstr(maxl//2, maxc//2, "Cyka Blyat! You Died Nakhoy!")
+        stdscr.refresh()
+        time.sleep(3)
+        playing = False
 
 init()
-paying = True
+playing = True
 while playing:
-    try:    
+    try:
         c = stdscr.getkey()
-    except:
+    except curses.error:
         c = ''
     if c in "asdw":
         move(c)
